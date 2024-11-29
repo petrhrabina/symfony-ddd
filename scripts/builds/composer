@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BACKEND_DIR="${PROJECT_ROOT}/backend"
+
+# Export environment variables from .env file
+set -a
+source "${BACKEND_DIR}/.env"
+set +a
+
+# Define Docker commands
+PHP_CONTAINER=${DOCKER_CONTAINER_PHP}
+EXEC="docker exec -it ${PHP_CONTAINER}"
+
+echo "🧹 Clearing cache..."
+${EXEC} composer clear-cache
+
+# echo "🧹 Cleaning Composer environment..."
+# ${EXEC} bash -c "rm -rf vendor/"
+# ${EXEC} bash -c "rm -f composer.lock"
+
+echo "📦 Reinstalling dependencies..."
+${EXEC} composer install --no-cache
+
+echo "🏭 Dumping autoload..."
+${EXEC} composer dump-autoload
+
+echo "🔍 Outdated packages check..."
+${EXEC} composer outdated
+
+echo "✅ Composer rebuild completed!"

@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BACKEND_DIR="${PROJECT_ROOT}/backend"
+
+# Export environment variables from .env file
+set -a
+source "${BACKEND_DIR}/.env"
+set +a
+
+# Define Docker Compose command
+DOCKER_COMPOSE="docker-compose -f ${BACKEND_DIR}/build/docker-compose.yml"
+PHP_CONTAINER=${DOCKER_CONTAINER_PHP}
+EXEC="docker exec -it ${PHP_CONTAINER}"
+
+echo "🛑 Stopping containers..."
+${DOCKER_COMPOSE} stop
+
+echo "🗑️  Removing containers, networks, and volumes..."
+${DOCKER_COMPOSE} down -v --remove-orphans
+${DOCKER_COMPOSE} rm -f
+
+echo "🔄 Pulling latest images..."
+${DOCKER_COMPOSE} pull
+
+echo "🏗️  Building containers..."
+${DOCKER_COMPOSE} build --pull
+
+echo "▶️  Starting containers..."
+${DOCKER_COMPOSE} up -d
+
+# Wait for containers to be ready
+# echo "⏳ Waiting for containers to be ready..."
+# sleep 5
+
+echo "🔑 Making console executable..."
+${EXEC} chmod +x bin/console
+
+echo "✅ Container rebuild completed!"

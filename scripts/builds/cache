@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BACKEND_DIR="${PROJECT_ROOT}/backend"
+
+# Export environment variables from .env file
+set -a
+source "${BACKEND_DIR}/.env"
+set +a
+
+# Define Docker commands
+PHP_CONTAINER=${DOCKER_CONTAINER_PHP}
+EXEC="docker exec -it ${PHP_CONTAINER}"
+CONSOLE="${EXEC} php bin/console"
+
+echo "🗑️  Removing all cache directories..."
+${EXEC} rm -rf var/cache/*
+
+echo "🧹 Cleaning Symfony cache..."
+${CONSOLE} cache:clear
+${CONSOLE} cache:pool:clear cache.app
+${CONSOLE} cache:pool:clear cache.system
+${CONSOLE} cache:pool:clear cache.doctrine.orm.default.result
+${CONSOLE} cache:pool:clear cache.doctrine.orm.default.query
+
+echo "📁 Creating required directories..."
+${EXEC} mkdir -p var/cache
+${EXEC} mkdir -p var/log
+
+echo "♨️  Warming up fresh cache..."
+${CONSOLE} cache:warmup
+
+echo "✅ Cache rebuild completed!"

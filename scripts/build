@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+BACKEND_DIR="${PROJECT_ROOT}/backend"
+
+# Export environment variables from .env file
+set -a
+source "${BACKEND_DIR}/.env"
+set +a
+
+# Define Docker commands
+DOCKER_COMPOSE="docker-compose -f ${BACKEND_DIR}/build/docker-compose.yml"
+PHP_CONTAINER=${DOCKER_CONTAINER_PHP}
+EXEC="docker exec -it ${PHP_CONTAINER}"
+
+# Function to handle errors
+function handle_error() {
+    echo "❌ Error occurred in: $1"
+    exit 1
+}
+
+# Function to check if previous command succeeded
+function check_status() {
+    if [ $? -ne 0 ]; then
+        handle_error "$1"
+    fi
+}
+
+echo "🚀 Starting complete build process..."
+
+function build() {
+    # Ensure scripts are executable
+    chmod +x ${SCRIPT_DIR}/builds/*
+
+    echo "📦 Rebuilding containers..."
+    bash ${SCRIPT_DIR}/builds/container
+    check_status "Container rebuild"
+
+    echo "📥 Installing dependencies..."
+    bash ${SCRIPT_DIR}/builds/composer
+    check_status "Composer install"
+
+    echo "💾 Setting up database..."
+    bash ${SCRIPT_DIR}/builds/database
+    check_status "Database setup"
+
+    echo "🧹 Clearing cache..."
+    bash ${SCRIPT_DIR}/builds/cache
+    check_status "Cache clear"
+}
+
+# Execute build
+build
+
+echo "✅ Build process completed successfully!"

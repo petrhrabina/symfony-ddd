@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BACKEND_DIR="${PROJECT_ROOT}/backend"
+
+# Export environment variables from .env file
+set -a
+source "${BACKEND_DIR}/.env"
+set +a
+
+# Define Docker commands
+PHP_CONTAINER=${DOCKER_CONTAINER_PHP}
+EXEC="docker exec -it ${PHP_CONTAINER}"
+CONSOLE="${EXEC} php bin/console"
+
+echo "🗑️  Cleaning database environment..."
+${EXEC} bash -c "rm -rf migrations/*.php"
+${CONSOLE} doctrine:database:drop --force --if-exists
+${CONSOLE} doctrine:database:create --if-not-exists
+
+echo "💾 Rebuilding database..."
+${CONSOLE} doctrine:schema:drop --force --full-database
+${CONSOLE} doctrine:migrations:diff --no-interaction
+${CONSOLE} doctrine:migrations:migrate --no-interaction
+
+echo "📊 Loading fixtures..."
+${CONSOLE} doctrine:fixtures:load --no-interaction
+
+echo "🧹 Clearing cache..."
+${CONSOLE} cache:clear
+${CONSOLE} cache:warmup
+
+echo "✅ Database rebuild completed!"
